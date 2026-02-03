@@ -4,38 +4,43 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.expensestracker.R
 import com.example.expensestracker.data.Currency
 import com.example.expensestracker.data.Expense
 import com.example.expensestracker.util.MoneyFormatter
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 class ExpenseAdapter(
     private val onClick: (Expense) -> Unit
-) : RecyclerView.Adapter<ExpenseAdapter.ExpenseViewHolder>() {
+) : ListAdapter<Expense, ExpenseAdapter.ExpenseViewHolder>(DIFF) {
 
-    private val items = mutableListOf<Expense>()
     private var currency: Currency = Currency.BAM
 
-    private val dateFormat =
-        SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<Expense>() {
+            override fun areItemsTheSame(
+                oldItem: Expense,
+                newItem: Expense
+            ) = oldItem.id == newItem.id
 
-    fun submitList(list: List<Expense>) {
-        items.clear()
-        items.addAll(list)
-        notifyDataSetChanged()
+            override fun areContentsTheSame(
+                oldItem: Expense,
+                newItem: Expense
+            ) = oldItem == newItem
+        }
     }
-
-    fun getItemAt(position: Int): Expense =
-        items[position]
 
     fun setCurrency(currency: Currency) {
         this.currency = currency
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount)
     }
+
+    fun getItemAt(position: Int): Expense =
+        currentList[position]
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -50,34 +55,24 @@ class ExpenseAdapter(
         holder: ExpenseViewHolder,
         position: Int
     ) {
-        holder.bind(items[position])
+        holder.bind(getItem(position))
     }
-
-    override fun getItemCount(): Int = items.size
 
     inner class ExpenseViewHolder(itemView: View) :
         RecyclerView.ViewHolder(itemView) {
 
-        private val tvTitle: TextView =
-            itemView.findViewById(R.id.tvTitle)
-        private val tvAmount: TextView =
-            itemView.findViewById(R.id.tvAmount)
-        private val tvMeta: TextView =
-            itemView.findViewById(R.id.tvMeta)
+        private val tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
+        private val tvAmount: TextView = itemView.findViewById(R.id.tvAmount)
+        private val tvMeta: TextView = itemView.findViewById(R.id.tvMeta)
+
+        private val df = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
         fun bind(expense: Expense) {
             tvTitle.text = expense.title
-            tvAmount.text =
-                MoneyFormatter.format(expense.amount, currency)
+            tvAmount.text = MoneyFormatter.format(expense.amount, currency)
+            tvMeta.text = "${expense.category} • ${df.format(Date(expense.date))}"
 
-            val dateStr =
-                dateFormat.format(Date(expense.date))
-            tvMeta.text =
-                "${expense.category} • $dateStr"
-
-            itemView.setOnClickListener {
-                onClick(expense)
-            }
+            itemView.setOnClickListener { onClick(expense) }
         }
     }
 }

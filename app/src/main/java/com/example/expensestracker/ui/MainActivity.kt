@@ -37,6 +37,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fabAdd: FloatingActionButton
     private lateinit var adapter: ExpenseAdapter
 
+    private var lastCategory: String? = null
+
+
     private val categories =
         listOf("Sve", "Hrana", "Prijevoz", "Stan", "Zabava", "Ostalo")
     private val currencies =
@@ -143,9 +146,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyFilter() {
-        val c = spinnerCategory.selectedItem as String
-        viewModel.setFilter(0L, Long.MAX_VALUE, if (c == "Sve") null else c)
+        val selected = spinnerCategory.selectedItem as String
+        if (selected == lastCategory) return
+
+        lastCategory = selected
+
+        viewModel.setFilter(
+            0L,
+            Long.MAX_VALUE,
+            if (selected == "Sve") null else selected
+        )
     }
+
 
     private fun setupFab() {
         fabAdd.setOnClickListener { showAddEditDialog(null) }

@@ -9,6 +9,9 @@ import com.example.expensestracker.data.SettingsManager
 import com.example.expensestracker.repository.ExpenseRepository
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+
 
 class ExpenseViewModel(application: Application) :
     AndroidViewModel(application) {
@@ -19,6 +22,9 @@ class ExpenseViewModel(application: Application) :
     private val filterFrom = MutableLiveData<Long>()
     private val filterTo = MutableLiveData<Long>()
     private val filterCategory = MutableLiveData<String?>(null)
+
+    private var filterJob: Job? = null
+
 
     val currency: MutableLiveData<Currency> =
         MutableLiveData(settings.getCurrency())
@@ -75,10 +81,16 @@ class ExpenseViewModel(application: Application) :
     // ---------------- FILTER ----------------
 
     fun setFilter(from: Long, to: Long, category: String?) {
-        filterFrom.value = from
-        filterTo.value = to
-        filterCategory.value = category
+        filterJob?.cancel()
+
+        filterJob = viewModelScope.launch {
+            delay(150) // debounce
+            filterFrom.value = from
+            filterTo.value = to
+            filterCategory.value = category
+        }
     }
+
 
     // ---------------- CURRENCY ----------------
 
