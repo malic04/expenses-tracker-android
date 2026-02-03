@@ -82,10 +82,27 @@ class ExpenseViewModel(application: Application) :
 
     // ---------------- CURRENCY ----------------
 
-    fun setCurrency(currency: Currency) {
-        settings.setCurrency(currency)
-        this.currency.value = currency
+    fun setCurrency(newCurrency: Currency) {
+        val oldCurrency = currency.value ?: Currency.BAM
+        if (oldCurrency == newCurrency) return
+
+        currency.value = newCurrency
+        settings.setCurrency(newCurrency)
+
+        val currentExpenses = expenses.value ?: return
+
+        viewModelScope.launch {
+            currentExpenses.forEach { expense ->
+                val convertedAmount =
+                    oldCurrency.convert(expense.amount, newCurrency)
+
+                repository.update(
+                    expense.copy(amount = convertedAmount)
+                )
+            }
+        }
     }
+
 
     // ---------------- CRUD ----------------
 
