@@ -3,6 +3,8 @@ package com.example.expensestracker.repository
 import androidx.lifecycle.LiveData
 import com.example.expensestracker.data.Expense
 import com.example.expensestracker.data.ExpenseDao
+import kotlinx.coroutines.flow.Flow
+
 
 class ExpenseRepository(
     private val expenseDao: ExpenseDao
@@ -12,9 +14,10 @@ class ExpenseRepository(
         from: Long,
         to: Long,
         category: String?
-    ): LiveData<List<Expense>> {
+    ): Flow<List<Expense>> {
         return expenseDao.getFilteredExpenses(from, to, category)
     }
+
 
     suspend fun insert(expense: Expense) {
         expenseDao.insertExpense(expense)

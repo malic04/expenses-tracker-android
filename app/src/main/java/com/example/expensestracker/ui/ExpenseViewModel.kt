@@ -1,17 +1,21 @@
 package com.example.expensestracker.ui
 
 import android.app.Application
-import androidx.lifecycle.*
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.map
+import androidx.lifecycle.viewModelScope
 import com.example.expensestracker.data.AppDatabase
 import com.example.expensestracker.data.Currency
 import com.example.expensestracker.data.Expense
 import com.example.expensestracker.data.SettingsManager
 import com.example.expensestracker.repository.ExpenseRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import java.util.Calendar
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-
 
 class ExpenseViewModel(application: Application) :
     AndroidViewModel(application) {
@@ -19,19 +23,30 @@ class ExpenseViewModel(application: Application) :
     private val repository: ExpenseRepository
     private val settings = SettingsManager(application)
 
-    private val filterFrom = MutableLiveData<Long>()
-    private val filterTo = MutableLiveData<Long>()
-    private val filterCategory = MutableLiveData<String?>(null)
+    // FILTERI (STATE FLOW)
+    private val filterFrom = MutableStateFlow(0L)
+    private val filterTo = MutableStateFlow(Long.MAX_VALUE)
+    private val filterCategory = MutableStateFlow<String?>(null)
 
-    private var filterJob: Job? = null
+    // VALUTA
+    val currency = MutableStateFlow(settings.getCurrency())
 
+    // LISTA TROŠKOVA – AUTOMATSKI SE OSVJEŽAVA
+    val expenses: LiveData<List<Expense>> =
+        combine(filterFrom, filterTo, filterCategory) { from, to, category ->
+            Triple(from, to, category)
+        }.flatMapLatest { (from, to, category) ->
+            repository.getFilteredExpenses(from, to, category)
+        }.asLiveData()
 
-    val currency: MutableLiveData<Currency> =
-        MutableLiveData(settings.getCurrency())
+    val totalAmount: LiveData<Double> =
+        expenses.map { list -> list.sumOf { it.amount } }
 
-    val expenses: LiveData<List<Expense>>
-    val totalAmount: LiveData<Double>
-    val totalByCategory: LiveData<Map<String, Double>>
+    val totalByCategory: LiveData<Map<String, Double>> =
+        expenses.map { list ->
+            list.groupBy { it.category }
+                .mapValues { it.value.sumOf { e -> e.amount } }
+        }
 
     init {
         val dao = AppDatabase
@@ -40,7 +55,7 @@ class ExpenseViewModel(application: Application) :
 
         repository = ExpenseRepository(dao)
 
-        // Default: ovaj mjesec
+        // default: ovaj mjesec
         val cal = Calendar.getInstance()
         cal.set(Calendar.DAY_OF_MONTH, 1)
         cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -50,71 +65,34 @@ class ExpenseViewModel(application: Application) :
 
         filterFrom.value = cal.timeInMillis
         filterTo.value = System.currentTimeMillis()
-
-        expenses = MediatorLiveData<List<Expense>>().apply {
-            fun reload() {
-                val source = repository.getFilteredExpenses(
-                    filterFrom.value ?: 0L,
-                    filterTo.value ?: Long.MAX_VALUE,
-                    filterCategory.value
-                )
-                addSource(source) { value = it }
-            }
-
-            addSource(filterFrom) { reload() }
-            addSource(filterTo) { reload() }
-            addSource(filterCategory) { reload() }
-        }
-
-        totalAmount = expenses.map { list ->
-            list.sumOf { it.amount }
-        }
-
-        totalByCategory = expenses.map { list ->
-            list.groupBy { it.category }
-                .mapValues { entry ->
-                    entry.value.sumOf { it.amount }
-                }
-        }
     }
 
     // ---------------- FILTER ----------------
 
     fun setFilter(from: Long, to: Long, category: String?) {
-        filterJob?.cancel()
-
-        filterJob = viewModelScope.launch {
-            delay(150) // debounce
-            filterFrom.value = from
-            filterTo.value = to
-            filterCategory.value = category
-        }
+        filterFrom.value = from
+        filterTo.value = to
+        filterCategory.value = category
     }
-
 
     // ---------------- CURRENCY ----------------
 
     fun setCurrency(newCurrency: Currency) {
-        val oldCurrency = currency.value ?: Currency.BAM
+        val oldCurrency = currency.value
         if (oldCurrency == newCurrency) return
 
         currency.value = newCurrency
         settings.setCurrency(newCurrency)
 
-        val currentExpenses = expenses.value ?: return
-
         viewModelScope.launch {
-            currentExpenses.forEach { expense ->
-                val convertedAmount =
+            expenses.value?.forEach { expense ->
+                val converted =
                     oldCurrency.convert(expense.amount, newCurrency)
 
-                repository.update(
-                    expense.copy(amount = convertedAmount)
-                )
+                repository.update(expense.copy(amount = converted))
             }
         }
     }
-
 
     // ---------------- CRUD ----------------
 

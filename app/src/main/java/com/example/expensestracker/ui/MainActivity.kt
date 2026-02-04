@@ -18,6 +18,9 @@ import com.example.expensestracker.data.SettingsManager
 import com.example.expensestracker.util.MoneyFormatter
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.text.SimpleDateFormat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -131,19 +134,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeViewModel() {
-        viewModel.expenses.observe(this) { adapter.submitList(it) }
-        viewModel.currency.observe(this) { adapter.setCurrency(it) }
-        viewModel.totalAmount.observe(this) {
-            tvTotal.text = "Ukupno: ${MoneyFormatter.format(it, viewModel.currency.value!!)}"
+        viewModel.expenses.observe(this) {
+            adapter.submitList(it)
         }
+
+        lifecycleScope.launch {
+            viewModel.currency.collect { currency ->
+                adapter.setCurrency(currency)
+            }
+        }
+
+        viewModel.totalAmount.observe(this) {
+            tvTotal.text =
+                "Ukupno: ${MoneyFormatter.format(it, viewModel.currency.value)}"
+        }
+
         viewModel.totalByCategory.observe(this) { map ->
             tvCategorySummary.text =
                 if (map.isEmpty()) "Nema troškova"
                 else map.entries.joinToString("\n") {
-                    "${it.key}: ${MoneyFormatter.format(it.value, viewModel.currency.value!!)}"
+                    "${it.key}: ${MoneyFormatter.format(it.value, viewModel.currency.value)}"
                 }
         }
     }
+
 
     private fun applyFilter() {
         val selected = spinnerCategory.selectedItem as String

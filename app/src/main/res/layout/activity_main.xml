@@ -9,9 +9,10 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:title="Expenses Tracker"
         android:background="?attr/colorPrimary"
-        app:titleTextColor="@android:color/white"/>
+        app:title="@string/app_name"
+        app:titleTextColor="@android:color/white" />
+
 
     <LinearLayout
         android:layout_width="match_parent"

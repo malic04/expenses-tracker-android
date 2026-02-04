@@ -16,7 +16,7 @@ interface ExpenseDao {
         from: Long,
         to: Long,
         category: String?
-    ): LiveData<List<Expense>>
+    ): kotlinx.coroutines.flow.Flow<List<Expense>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExpense(expense: Expense)
