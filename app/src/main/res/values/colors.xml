@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <color name="primary">#2E7D32</color>        <!-- tamno zelena -->
+    <color name="primaryVariant">#1B5E20</color>
+    <color name="secondary">#4CAF50</color>
+
+    <color name="background">#F4F6F8</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="onBackground">#1C1C1E</color>
+
 </resources>

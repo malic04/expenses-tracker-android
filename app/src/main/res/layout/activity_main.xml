@@ -11,7 +11,9 @@
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
         app:title="@string/app_name"
-        app:titleTextColor="@android:color/white" />
+        app:titleTextAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+        app:titleTextColor="@android:color/white"
+        app:elevation="0dp"/>
 
 
     <LinearLayout
